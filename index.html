@@ -1,68 +1,42 @@
-const BOT_TOKEN = (process.env.TELEGRAM_BOT_TOKEN || '').trim();
-const WEBHOOK_SECRET = (process.env.TELEGRAM_WEBHOOK_SECRET || '').trim();
-const APP_URL = 'https://yoko-store.ai.studio';
-const APP_BUTTON_TEXT = 'Приложение Йоко Магазин';
-
-async function tg(method, payload) {
-  const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${method}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: payload ? JSON.stringify(payload) : undefined,
-  });
-  const data = await res.json();
-  if (!data.ok) {
-    throw new Error(data.description || `Telegram API error (${res.status})`);
-  }
-  return data.result;
-}
-
-export default async function handler(req, res) {
-  if (!BOT_TOKEN) {
-    return res.status(400).json({
-      ok: false,
-      error:
-        'Не задан TELEGRAM_BOT_TOKEN. Добавьте его в Vercel: Settings -> Environment Variables -> TELEGRAM_BOT_TOKEN, затем сделайте Redeploy.',
-    });
-  }
-
-  try {
-    const proto =
-      String(req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim();
-    const host = req.headers.host;
-    const webhookUrl = `${proto}://${host}/api/webhook`;
-
-    const me = await tg('getMe');
-    await tg('setWebhook', {
-      url: webhookUrl,
-      secret_token: WEBHOOK_SECRET || undefined,
-      allowed_updates: ['message', 'callback_query'],
-    });
-    await tg('setMyCommands', {
-      commands: [
-        { command: 'start', description: 'Подписки и запуск Йоко Магазина' },
-        { command: 'status', description: 'Проверка работы бота' },
-        { command: 'ping', description: 'Проверка отклика' },
-        { command: 'help', description: 'Список команд' },
-      ],
-    });
-    await tg('setChatMenuButton', {
-      menu_button: {
-        type: 'web_app',
-        text: APP_BUTTON_TEXT.slice(0, 32),
-        web_app: { url: APP_URL },
-      },
-    });
-
-    return res.status(200).json({
-      ok: true,
-      message: 'Готово! Бот успешно подключён к Vercel и работает 24/7.',
-      bot: `@${me.username}`,
-      webhookUrl,
-    });
-  } catch (err) {
-    return res.status(500).json({
-      ok: false,
-      error: err?.message || 'Ошибка при настройке Telegram Webhook',
-    });
-  }
-}
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yoko Telegram Bot — Vercel</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 32px 16px; display: flex; justify-content: center; }
+      .box { max-width: 520px; width: 100%; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; }
+      h1 { font-size: 20px; margin: 0 0 8px; }
+      p { font-size: 14px; color: #475569; line-height: 1.5; margin: 0 0 16px; }
+      button { background: #0284c7; color: #fff; border: none; border-radius: 8px; padding: 12px 18px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; }
+      button:hover { background: #0369a1; }
+      pre { margin: 16px 0 0; padding: 12px; background: #0f172a; color: #f8fafc; border-radius: 8px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h1>Yoko Telegram Bot (Vercel 24/7)</h1>
+      <p>Нажмите кнопку ниже, чтобы подключить Webhook, команды и кнопку «Приложение Йоко Магазин».</p>
+      <button id="btn" onclick="setup()">Подключить бота к Telegram</button>
+      <pre id="out">Ожидание подключения...</pre>
+    </div>
+    <script>
+      async function setup() {
+        const out = document.getElementById('out');
+        const btn = document.getElementById('btn');
+        btn.disabled = true;
+        out.textContent = 'Подключение к Telegram API...';
+        try {
+          const res = await fetch('/api/setup');
+          const data = await res.json();
+          out.textContent = JSON.stringify(data, null, 2);
+        } catch (e) {
+          out.textContent = 'Ошибка: ' + e.message;
+        } finally {
+          btn.disabled = false;
+        }
+      }
+    </script>
+  </body>
+</html>
